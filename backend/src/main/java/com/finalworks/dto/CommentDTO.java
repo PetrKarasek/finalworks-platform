@@ -13,10 +13,10 @@ import java.time.LocalDateTime;
 public class CommentDTO {
     private Long id;
     
-    @NotBlank(message = "Comment content is required")
+    @NotBlank(message = "Nesmí být prázdné")
     private String content;
     
-    @NotBlank(message = "Author name is required")
+    @NotBlank(message = "Musí být zadáno jméno autora")
     private String authorName;
     
     private LocalDateTime createdAt;
