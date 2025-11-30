@@ -8,6 +8,7 @@ import com.finalworks.model.ErrorLog;
 import com.finalworks.repository.ErrorLogRepository;
 import org.springframework.context.ApplicationContext;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 
 public class DatabaseAppender extends AppenderBase<ILoggingEvent> {
@@ -20,63 +21,66 @@ public class DatabaseAppender extends AppenderBase<ILoggingEvent> {
 
     @Override
     protected void append(ILoggingEvent event) {
+
         // Logovat pouze události úrovně ERROR
-        if (event.getLevel().levelInt >= Level.ERROR.levelInt) {
-            try {
-                if (applicationContext != null) {
-                    ErrorLogRepository errorLogRepository =
-                            applicationContext.getBean(ErrorLogRepository.class);
+        if (event.getLevel().levelInt < Level.ERROR.levelInt) {
+            return;
+        }
 
-                    if (errorLogRepository != null) {
-                        ErrorLog errorLog = new ErrorLog();
-
-                        errorLog.setMessage(event.getFormattedMessage());
-                        errorLog.setLoggerName(event.getLoggerName());
-                        errorLog.setThreadName(event.getThreadName());
-                        errorLog.setLevel(event.getLevel().toString());
-                        errorLog.setTimestamp(java.time.LocalDateTime.now());
-
-                        // Stack trace
-                        if (event.getThrowableProxy() != null) {
-                            ThrowableProxy throwableProxy =
-                                    (ThrowableProxy) event.getThrowableProxy();
-
-                            StringBuilder stackTrace = new StringBuilder();
-
-                            stackTrace.append(throwableProxy.getClassName())
-                                    .append(": ")
-                                    .append(throwableProxy.getMessage())
-                                    .append("\n");
-
-                            if (throwableProxy.getStackTraceElementProxyArray() != null) {
-                                Arrays.stream(throwableProxy.getStackTraceElementProxyArray())
-                                        .limit(50)
-                                        .forEach(element ->
-                                                stackTrace.append("\tat ")
-                                                        .append(element.getStackTraceElement())
-                                                        .append("\n")
-                                        );
-                            }
-
-                            errorLog.setStackTrace(stackTrace.toString());
-                        }
-
-                        // Název třídy a metody
-                        if (event.getCallerData() != null && event.getCallerData().length > 0) {
-                            StackTraceElement caller = event.getCallerData()[0];
-                            errorLog.setClassName(caller.getClassName());
-                            errorLog.setMethodName(caller.getMethodName());
-                        }
-
-                        errorLogRepository.save(errorLog);
-                    }
-                }
-            } catch (Exception e) {
-                // Záložní řešení na konzoli, pokud se nepodaří zapsat do databáze
-                System.err.println("Failed to write error log to database: " + e.getMessage());
-                System.err.println("Original error log: " + event.getFormattedMessage());
-                e.printStackTrace();
+        try {
+            if (applicationContext == null) {
+                return;
             }
+
+            ErrorLogRepository errorLogRepository =
+                    applicationContext.getBean(ErrorLogRepository.class);
+
+            ErrorLog errorLog = new ErrorLog();
+
+            errorLog.setMessage(event.getFormattedMessage());
+            errorLog.setLoggerName(event.getLoggerName());
+            errorLog.setThreadName(event.getThreadName());
+            errorLog.setLevel(event.getLevel().toString());
+            errorLog.setTimestamp(LocalDateTime.now());
+
+            // Stack trace
+            if (event.getThrowableProxy() != null) {
+                ThrowableProxy throwableProxy =
+                        (ThrowableProxy) event.getThrowableProxy();
+
+                StringBuilder stackTrace = new StringBuilder();
+
+                stackTrace.append(throwableProxy.getClassName())
+                        .append(": ")
+                        .append(throwableProxy.getMessage())
+                        .append("\n");
+
+                if (throwableProxy.getStackTraceElementProxyArray() != null) {
+                    Arrays.stream(throwableProxy.getStackTraceElementProxyArray())
+                            .limit(50)
+                            .forEach(element ->
+                                    stackTrace.append("\tat ")
+                                            .append(element.getStackTraceElement())
+                                            .append("\n")
+                            );
+                }
+
+                errorLog.setStackTrace(stackTrace.toString());
+            }
+
+            // Název třídy a metody
+            if (event.getCallerData() != null && event.getCallerData().length > 0) {
+                StackTraceElement caller = event.getCallerData()[0];
+                errorLog.setClassName(caller.getClassName());
+                errorLog.setMethodName(caller.getMethodName());
+            }
+
+            errorLogRepository.save(errorLog);
+
+        } catch (Exception e) {
+            System.err.println("Failed to write error log to database: " + e.getMessage());
+            System.err.println("Original error log: " + event.getFormattedMessage());
+            e.printStackTrace();
         }
     }
 }
