@@ -94,7 +94,6 @@ public class FinalWorkService {
 
     @Transactional
     public CommentDTO addComment(Long finalWorkId, CommentDTO commentDTO) {
-        // Validace je zpracována anotací @Valid v controlleru
         FinalWork finalWork = finalWorkRepository.findById(finalWorkId)
                 .orElseThrow(() -> new ResourceNotFoundException("Final work not found with id: " + finalWorkId));
 
