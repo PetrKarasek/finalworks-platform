@@ -1,7 +1,7 @@
 # Final Works Platform
 
-A web application for teachers to share and comment on student final works. Built with Spring Boot (backend) and React (frontend).
-
+Portál pro sdílení a komentování studentských prací. Použitý Spring Boot (backend) a React (frontend).
+Backend ještě bude pravděpodobně při tvoření frontendu.
 ## Features
 
 - View all student final works
