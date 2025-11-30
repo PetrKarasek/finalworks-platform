@@ -17,7 +17,7 @@ public class LogbackConfig implements ApplicationListener<ContextRefreshedEvent>
 
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
-        // Set the application context for the DatabaseAppender
+        // Nastavit aplikační kontext pro DatabaseAppender
         DatabaseAppender.setApplicationContext(applicationContext);
     }
 }

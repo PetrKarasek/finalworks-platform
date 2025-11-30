@@ -43,8 +43,6 @@ public class FinalWorkService {
 
     @Transactional
     public FinalWorkDTO createFinalWork(FinalWorkDTO finalWorkDTO) {
-        // Validation is handled by @Valid annotation in controller
-        // Additional business logic validation
         Student student = studentRepository.findById(finalWorkDTO.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found with id: " + finalWorkDTO.getStudentId()));
 
@@ -55,7 +53,7 @@ public class FinalWorkService {
         finalWork.setStudent(student);
 
         FinalWork saved = finalWorkRepository.save(finalWork);
-        // Return the saved entity with all generated fields (id, submittedAt, etc.)
+        // Vrátit uloženou entitu se všemi vygenerovanými poli (id, submittedAt, atd.)
         return convertToDTO(saved);
     }
 
@@ -64,7 +62,7 @@ public class FinalWorkService {
         FinalWork finalWork = finalWorkRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Final work not found with id: " + id));
 
-        // Update only provided fields, preserving existing values for others
+        // Aktualizovat pouze poskytnutá pole, zachovat existující hodnoty pro ostatní
         if (finalWorkDTO.getTitle() != null && !finalWorkDTO.getTitle().trim().isEmpty()) {
             finalWork.setTitle(finalWorkDTO.getTitle().trim());
         }
@@ -76,7 +74,7 @@ public class FinalWorkService {
         }
 
         FinalWork updated = finalWorkRepository.save(finalWork);
-        // Return the updated entity with all current values
+        // Vrátit aktualizovanou entitu se všemi aktuálními hodnotami
         return convertToDTO(updated);
     }
 
@@ -96,7 +94,7 @@ public class FinalWorkService {
 
     @Transactional
     public CommentDTO addComment(Long finalWorkId, CommentDTO commentDTO) {
-        // Validation is handled by @Valid annotation in controller
+        // Validace je zpracována anotací @Valid v controlleru
         FinalWork finalWork = finalWorkRepository.findById(finalWorkId)
                 .orElseThrow(() -> new ResourceNotFoundException("Final work not found with id: " + finalWorkId));
 
@@ -106,7 +104,7 @@ public class FinalWorkService {
         comment.setFinalWork(finalWork);
 
         Comment saved = commentRepository.save(comment);
-        // Return the saved comment with all generated fields (id, createdAt, etc.)
+        // Vrátit uložený komentář se všemi vygenerovanými poli (id, createdAt, atd.)
         return convertCommentToDTO(saved);
     }
 

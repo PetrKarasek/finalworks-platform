@@ -19,7 +19,7 @@ public class DatabaseAppender extends AppenderBase<ILoggingEvent> {
 
     @Override
     protected void append(ILoggingEvent event) {
-        // Only log FATAL level events
+        // Logovat pouze události úrovně FATAL
         if (event.getLevel().levelInt >= ch.qos.logback.classic.Level.FATAL.levelInt) {
             try {
                 if (applicationContext != null) {
@@ -33,7 +33,7 @@ public class DatabaseAppender extends AppenderBase<ILoggingEvent> {
                         fatalLog.setLevel(event.getLevel().toString());
                         fatalLog.setTimestamp(java.time.LocalDateTime.now());
 
-                        // Extract stack trace if exception exists
+                        // Extrahovat stack trace, pokud existuje výjimka
                         if (event.getThrowableProxy() != null) {
                             ThrowableProxy throwableProxy = (ThrowableProxy) event.getThrowableProxy();
                             StringBuilder stackTrace = new StringBuilder();
@@ -54,7 +54,7 @@ public class DatabaseAppender extends AppenderBase<ILoggingEvent> {
                             fatalLog.setStackTrace(stackTrace.toString());
                         }
 
-                        // Extract class and method name from caller data
+                        // Extrahovat název třídy a metody z dat volajícího
                         if (event.getCallerData() != null && event.getCallerData().length > 0) {
                             StackTraceElement caller = event.getCallerData()[0];
                             fatalLog.setClassName(caller.getClassName());
@@ -65,7 +65,7 @@ public class DatabaseAppender extends AppenderBase<ILoggingEvent> {
                     }
                 }
             } catch (Exception e) {
-                // Fallback to console if database logging fails
+                // Záložní řešení na konzoli, pokud se nepodaří zapsat do databáze
                 System.err.println("Failed to write fatal log to database: " + e.getMessage());
                 System.err.println("Original fatal log: " + event.getFormattedMessage());
                 e.printStackTrace();

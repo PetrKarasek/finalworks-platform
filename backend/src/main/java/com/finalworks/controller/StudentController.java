@@ -44,7 +44,7 @@ public class StudentController {
 
     @PostMapping
     public ResponseEntity<StudentDTO> createStudent(@RequestBody StudentRequestDTO studentRequest) {
-        // Validate input
+        // Ověřit vstup
         if (studentRequest.getName() == null || studentRequest.getName().trim().isEmpty()) {
             throw new BadRequestException("Name is required");
         }
@@ -55,7 +55,7 @@ public class StudentController {
             throw new BadRequestException("Password is required");
         }
         
-        // Check if email already exists
+        // Zkontrolovat, zda email již existuje
         if (studentRepository.findByEmail(studentRequest.getEmail()).isPresent()) {
             throw new ConflictException("Email already exists: " + studentRequest.getEmail());
         }
@@ -63,7 +63,7 @@ public class StudentController {
         Student student = new Student();
         student.setName(studentRequest.getName());
         student.setEmail(studentRequest.getEmail());
-        // Hash the password before saving - password is never stored in plain text
+        // Hashovat heslo před uložením - heslo se nikdy neukládá jako prostý text
         student.setPassword(passwordEncoder.encode(studentRequest.getPassword()));
         
         Student saved = studentRepository.save(student);
@@ -75,7 +75,7 @@ public class StudentController {
         Student student = studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found with id: " + id));
         
-        // Validate input
+        // Ověřit vstup
         if (studentRequest.getName() == null || studentRequest.getName().trim().isEmpty()) {
             throw new BadRequestException("Name is required");
         }
@@ -83,7 +83,7 @@ public class StudentController {
             throw new BadRequestException("Email is required");
         }
         
-        // Check if email is being changed and if new email already exists
+        // Zkontrolovat, zda se email mění a zda nový email již existuje
         if (!student.getEmail().equals(studentRequest.getEmail())) {
             if (studentRepository.findByEmail(studentRequest.getEmail()).isPresent()) {
                 throw new ConflictException("Email already exists: " + studentRequest.getEmail());
@@ -92,7 +92,7 @@ public class StudentController {
         
         student.setName(studentRequest.getName());
         student.setEmail(studentRequest.getEmail());
-        // Hash the password if it's being updated - password is never stored in plain text
+        // Hashovat heslo, pokud se aktualizuje - heslo se nikdy neukládá jako prostý text
         if (studentRequest.getPassword() != null && !studentRequest.getPassword().isEmpty()) {
             student.setPassword(passwordEncoder.encode(studentRequest.getPassword()));
         }
@@ -115,7 +115,7 @@ public class StudentController {
         dto.setId(student.getId());
         dto.setName(student.getName());
         dto.setEmail(student.getEmail());
-        // Password is intentionally excluded - never returned
+        // Heslo je záměrně vyloučeno - nikdy se nevrací
         return dto;
     }
 }

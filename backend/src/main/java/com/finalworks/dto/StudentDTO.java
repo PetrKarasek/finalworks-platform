@@ -11,6 +11,6 @@ public class StudentDTO {
     private Long id;
     private String name;
     private String email;
-    // Password is intentionally excluded - never returned in responses
+    // Heslo je záměrně vyloučeno - nikdy se nevrací v odpovědích
 }
 
