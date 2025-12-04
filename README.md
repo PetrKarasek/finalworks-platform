@@ -1,7 +1,7 @@
 # Final Works Platform
 
 Portál pro sdílení a komentování studentských prací. Použitý Spring Boot (backend) a React (frontend).
-Backend ještě bude pravděpodobně při tvoření frontendu.
+Backend ještě bude pravděpodobně upraven při tvoření frontendu.
 ## Features
 
 - View all student final works
