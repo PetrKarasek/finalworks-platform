@@ -2,53 +2,10 @@
   padding: 20px 0;
 }
 
-.list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.final-works-list h2 {
   margin-bottom: 30px;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.list-header h2 {
+  color: #2c3e50;
   font-size: 2rem;
-  color: #333;
-  margin: 0;
-}
-
-.search-container {
-  position: relative;
-  flex: 1;
-  max-width: 500px;
-}
-
-.search-input {
-  width: 100%;
-  padding: 12px 40px 12px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #667eea;
-}
-
-.search-icon {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
-.search-results-info {
-  margin-bottom: 16px;
-  color: #666;
-  font-size: 0.95rem;
 }
 
 .works-grid {
@@ -98,18 +55,13 @@
 
 .work-meta {
   display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
   margin-top: auto;
   padding-top: 15px;
   border-top: 1px solid #ecf0f1;
-  font-size: 0.9rem;
-  color: #888;
-}
-
-.work-meta .rating {
-  color: #f59e0b;
-  font-weight: 600;
+  font-size: 0.85rem;
+  color: #7f8c8d;
 }
 
 .comments-count {
@@ -125,20 +77,5 @@
 
 .error {
   color: #e74c3c;
-}
-
-@media (max-width: 768px) {
-  .list-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-container {
-    max-width: 100%;
-  }
-
-  .works-grid {
-    grid-template-columns: 1fr;
-  }
 }
 

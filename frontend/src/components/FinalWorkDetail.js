@@ -1,28 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import { finalWorksAPI } from '../services/api';
+import { getWorkRating, rateWork } from '../utils/ratings';
+import { isBookmarked, addBookmark, removeBookmark } from '../utils/bookmarks';
+import { useAuth } from '../context/AuthContext';
 import './FinalWorkDetail.css';
 
 const FinalWorkDetail = () => {
   const { id } = useParams();
+  const { user, isAdmin } = useAuth();
   const [finalWork, setFinalWork] = useState(null);
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newComment, setNewComment] = useState({ content: '', authorName: '' });
+  const [userRating, setUserRating] = useState(0);
+  const [bookmarked, setBookmarked] = useState(false);
 
   useEffect(() => {
     fetchFinalWork();
     fetchComments();
+    if (id) {
+      setUserRating(getWorkRating(Number(id)));
+      setBookmarked(isBookmarked(Number(id)));
+    }
   }, [id]);
 
   const fetchFinalWork = async () => {
     try {
-      const response = await axios.get(`https://localhost:8443/api/final-works/${id}`);
+      const response = await finalWorksAPI.getById(id);
       setFinalWork(response.data);
       setLoading(false);
     } catch (err) {
-      setError('Failed to load final work');
+      setError('Nepodařilo se načíst práci');
       setLoading(false);
       console.error(err);
     }
@@ -30,7 +40,7 @@ const FinalWorkDetail = () => {
 
   const fetchComments = async () => {
     try {
-      const response = await axios.get(`https://localhost:8443/api/final-works/${id}/comments`);
+      const response = await finalWorksAPI.getComments(id);
       setComments(response.data);
     } catch (err) {
       console.error('Failed to load comments', err);
@@ -40,95 +50,177 @@ const FinalWorkDetail = () => {
   const handleSubmitComment = async (e) => {
     e.preventDefault();
     if (!newComment.content.trim() || !newComment.authorName.trim()) {
-      alert('Please fill in all fields');
+      alert('Prosím vyplňte všechna pole');
       return;
     }
 
     try {
-      await axios.post(`https://localhost:8443/api/final-works/${id}/comments`, newComment);
+      await finalWorksAPI.addComment(id, newComment);
       setNewComment({ content: '', authorName: '' });
       fetchComments();
       fetchFinalWork();
     } catch (err) {
-      alert('Failed to submit comment');
+      alert('Nepodařilo se odeslat komentář');
       console.error(err);
     }
   };
 
-  if (loading) return <div className="loading">Loading...</div>;
+  const handleRating = (rating) => {
+    rateWork(Number(id), rating);
+    setUserRating(rating);
+  };
+
+  const handleBookmark = () => {
+    if (bookmarked) {
+      removeBookmark(Number(id));
+      setBookmarked(false);
+    } else {
+      addBookmark(Number(id));
+      setBookmarked(true);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Opravdu chcete smazat tuto práci?')) {
+      return;
+    }
+
+    try {
+      await finalWorksAPI.delete(id);
+      window.location.href = '/';
+    } catch (err) {
+      alert('Nepodařilo se smazat práci');
+      console.error(err);
+    }
+  };
+
+  if (loading) return <div className="loading">Načítání...</div>;
   if (error) return <div className="error">{error}</div>;
-  if (!finalWork) return <div className="error">Final work not found</div>;
+  if (!finalWork) return <div className="error">Práce nenalezena</div>;
 
   return (
     <div className="final-work-detail">
-      <Link to="/" className="back-link">← Back to all works</Link>
+      <Link to="/" className="back-link">← Zpět na všechny práce</Link>
       
       <div className="work-header">
-        <h1>{finalWork.title}</h1>
+        <div className="work-title-row">
+          <h1>{finalWork.title}</h1>
+          <div className="work-actions">
+            <button
+              onClick={handleBookmark}
+              className={`bookmark-btn ${bookmarked ? 'bookmarked' : ''}`}
+              title={bookmarked ? 'Odebrat ze záložek' : 'Přidat do záložek'}
+            >
+              {bookmarked ? '🔖' : '🔗'}
+            </button>
+            {isAdmin && (
+              <button onClick={handleDelete} className="delete-btn" title="Smazat práci">
+                🗑️
+              </button>
+            )}
+          </div>
+        </div>
         <div className="work-info">
-          <span className="student-info">By: {finalWork.studentName} ({finalWork.studentEmail})</span>
+          <span className="student-info">Autor: {finalWork.studentName} ({finalWork.studentEmail})</span>
           <span className="date">
-            Submitted: {new Date(finalWork.submittedAt).toLocaleString()}
+            Přidáno: {new Date(finalWork.submittedAt).toLocaleString('cs-CZ')}
           </span>
+        </div>
+        <div className="rating-section">
+          <span className="rating-label">Hodnocení:</span>
+          <div className="star-rating">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                className={`star ${star <= userRating ? 'active' : ''}`}
+                onClick={() => handleRating(star)}
+                title={`Ohodnotit ${star} ${star === 1 ? 'hvězdičkou' : 'hvězdičkami'}`}
+              >
+                ⭐
+              </button>
+            ))}
+            {userRating > 0 && (
+              <span className="rating-value">({userRating}/5)</span>
+            )}
+          </div>
         </div>
       </div>
 
       {finalWork.description && (
         <div className="work-description">
-          <h2>Description</h2>
+          <h2>Popis</h2>
           <p>{finalWork.description}</p>
         </div>
       )}
 
       {finalWork.fileUrl && (
         <div className="work-file">
-          <h2>File</h2>
+          <h2>Soubor</h2>
           <a href={finalWork.fileUrl} target="_blank" rel="noopener noreferrer" className="file-link">
-            View/Download File
+            Zobrazit/Stáhnout soubor
           </a>
         </div>
       )}
 
       <div className="comments-section">
-        <h2>Comments ({comments.length})</h2>
+        <h2>Komentáře ({comments.length})</h2>
         
         <form onSubmit={handleSubmitComment} className="comment-form">
           <div className="form-group">
-            <label htmlFor="authorName">Your Name</label>
+            <label htmlFor="authorName">Vaše jméno</label>
             <input
               type="text"
               id="authorName"
               value={newComment.authorName}
               onChange={(e) => setNewComment({ ...newComment, authorName: e.target.value })}
-              placeholder="Enter your name"
+              placeholder="Zadejte vaše jméno"
               required
             />
           </div>
           <div className="form-group">
-            <label htmlFor="content">Comment</label>
+            <label htmlFor="content">Komentář</label>
             <textarea
               id="content"
               value={newComment.content}
               onChange={(e) => setNewComment({ ...newComment, content: e.target.value })}
-              placeholder="Write your comment here..."
+              placeholder="Napište váš komentář..."
               rows="4"
               required
             />
           </div>
-          <button type="submit" className="submit-button">Submit Comment</button>
+          <button type="submit" className="submit-button">Odeslat komentář</button>
         </form>
 
         <div className="comments-list">
           {comments.length === 0 ? (
-            <div className="no-comments">No comments yet. Be the first to comment!</div>
+            <div className="no-comments">Zatím žádné komentáře. Buďte první, kdo komentuje!</div>
           ) : (
             comments.map((comment) => (
               <div key={comment.id} className="comment-card">
                 <div className="comment-header">
                   <span className="comment-author">{comment.authorName}</span>
                   <span className="comment-date">
-                    {new Date(comment.createdAt).toLocaleString()}
+                    {new Date(comment.createdAt).toLocaleString('cs-CZ')}
                   </span>
+                  {isAdmin && (
+                    <button
+                      onClick={async () => {
+                        if (window.confirm('Opravdu chcete smazat tento komentář?')) {
+                          try {
+                            await finalWorksAPI.deleteComment(comment.id);
+                            fetchComments();
+                          } catch (err) {
+                            alert('Nepodařilo se smazat komentář');
+                          }
+                        }
+                      }}
+                      className="delete-comment-btn"
+                      title="Smazat komentář"
+                    >
+                      🗑️
+                    </button>
+                  )}
                 </div>
                 <p className="comment-content">{comment.content}</p>
               </div>
