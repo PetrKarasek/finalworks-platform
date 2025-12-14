@@ -1,6 +1,10 @@
 package com.finalworks.exception;
 
+import org.hibernate.StaleObjectStateException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -14,26 +18,32 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex) {
+        logger.warn("Resource not found: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage());
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ErrorResponse> handleBadRequestException(BadRequestException ex) {
+        logger.warn("Bad request: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage());
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponse> handleConflictException(ConflictException ex) {
+        logger.warn("Conflict: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse(HttpStatus.CONFLICT.value(), ex.getMessage());
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
+        logger.warn("Illegal argument: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage());
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
@@ -46,6 +56,7 @@ public class GlobalExceptionHandler {
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
+        logger.warn("Validation failed: {}", errors);
         ValidationErrorResponse errorResponse = new ValidationErrorResponse(
             HttpStatus.BAD_REQUEST.value(),
             "Validation failed",
@@ -62,15 +73,27 @@ public class GlobalExceptionHandler {
         } else if (ex.getMessage() != null && ex.getMessage().contains("constraint")) {
             message = "Data constraint violation";
         }
+        logger.error("Data integrity violation: {}", ex.getMessage(), ex);
         ErrorResponse error = new ErrorResponse(HttpStatus.CONFLICT.value(), message);
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler({OptimisticLockingFailureException.class, StaleObjectStateException.class})
+    public ResponseEntity<ErrorResponse> handleOptimisticLockingException(Exception ex) {
+        logger.warn("Optimistic locking failure - concurrent modification detected: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+            HttpStatus.CONFLICT.value(),
+            "The resource was modified by another user. Please refresh and try again."
+        );
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        logger.error("Unexpected error occurred", ex);
         ErrorResponse error = new ErrorResponse(
             HttpStatus.INTERNAL_SERVER_ERROR.value(),
-            "An unexpected error occurred: " + ex.getMessage()
+            "An unexpected error occurred. Please try again later."
         );
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }

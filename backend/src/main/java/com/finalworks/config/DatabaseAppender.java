@@ -19,12 +19,11 @@ public class DatabaseAppender extends AppenderBase<ILoggingEvent> {
 
     @Override
     protected void append(ILoggingEvent event) {
-        // Logovat pouze události úrovně FATAL
-        if (event.getLevel().levelInt >= ch.qos.logback.classic.Level.FATAL.levelInt) {
+        // Log only events at level ERROR or higher (Logback does not have FATAL; use ERROR)
+        if (event.getLevel().isGreaterOrEqual(ch.qos.logback.classic.Level.ERROR)) {
             try {
                 if (applicationContext != null) {
                     FatalLogRepository fatalLogRepository = applicationContext.getBean(FatalLogRepository.class);
-                    
                     if (fatalLogRepository != null) {
                         FatalLog fatalLog = new FatalLog();
                         fatalLog.setMessage(event.getFormattedMessage());

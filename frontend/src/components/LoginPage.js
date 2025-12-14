@@ -15,6 +15,18 @@ const LoginPage = () => {
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
+
+  const validatePassword = (password) => {
+    const errors = [];
+    if (password.length < 8) {
+      errors.push('Heslo musí mít alespoň 8 znaků');
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push('Heslo musí obsahovat alespoň jedno velké písmeno');
+    }
+    return errors;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,6 +35,21 @@ const LoginPage = () => {
       [name]: value
     }));
     setError(null);
+    
+    // Real-time password validation
+    if (name === 'password' && !isLogin) {
+      const passwordErrors = validatePassword(value);
+      setValidationErrors(prev => ({
+        ...prev,
+        password: passwordErrors
+      }));
+    } else if (name === 'password') {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.password;
+        return newErrors;
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -54,7 +81,16 @@ const LoginPage = () => {
         navigate('/');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Něco se pokazilo');
+      // Handle validation errors from backend
+      if (err.response?.data?.fieldErrors) {
+        const fieldErrors = err.response.data.fieldErrors;
+        setValidationErrors(fieldErrors);
+        setError('Prosím opravte chyby ve formuláři');
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Něco se pokazilo. Zkuste to prosím znovu.');
+      }
       console.error(err);
     } finally {
       setLoading(false);
@@ -105,9 +141,24 @@ const LoginPage = () => {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              placeholder="Zadejte heslo"
+              placeholder={isLogin ? "Zadejte heslo" : "Min. 8 znaků, 1 velké písmeno"}
               required
+              className={validationErrors.password ? 'error-input' : ''}
             />
+            {!isLogin && validationErrors.password && (
+              <div className="validation-errors">
+                {Array.isArray(validationErrors.password) ? (
+                  validationErrors.password.map((err, idx) => (
+                    <div key={idx} className="validation-error">{err}</div>
+                  ))
+                ) : (
+                  <div className="validation-error">{validationErrors.password}</div>
+                )}
+              </div>
+            )}
+            {!isLogin && formData.password && !validationErrors.password && (
+              <div className="validation-success">✓ Heslo splňuje požadavky</div>
+            )}
           </div>
 
           <button type="submit" disabled={loading} className="submit-btn">

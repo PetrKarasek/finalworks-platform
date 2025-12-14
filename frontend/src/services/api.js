@@ -3,6 +3,8 @@ import axios from 'axios';
 const API_BASE_URL = 'https://localhost:8443/api';
 
 // Create axios instance with default config
+// Note: Browser will show SSL warning for self-signed certificate
+// User needs to accept the certificate warning in the browser
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {

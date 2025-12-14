@@ -4,6 +4,8 @@ import com.finalworks.dto.CommentDTO;
 import com.finalworks.dto.FinalWorkDTO;
 import com.finalworks.service.FinalWorkService;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,8 +15,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/final-works")
-@CrossOrigin(origins = "https://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:3000", "https://localhost:3000"})
 public class FinalWorkController {
+
+    private static final Logger logger = LoggerFactory.getLogger(FinalWorkController.class);
 
     @Autowired
     private FinalWorkService finalWorkService;

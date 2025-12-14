@@ -18,14 +18,17 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, columnDefinition = "TEXT", length = 2000)
     private String content;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String authorName;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @Version
+    private Long version; // Optimistic locking for concurrent access
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "final_work_id", nullable = false)

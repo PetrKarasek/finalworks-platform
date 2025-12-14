@@ -108,6 +108,37 @@
   border-left: 4px solid #c33;
 }
 
+.error-input {
+  border-color: #c33 !important;
+}
+
+.validation-errors {
+  margin-top: 4px;
+}
+
+.validation-error {
+  color: #c33;
+  font-size: 0.85rem;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.validation-error::before {
+  content: "⚠";
+  margin-right: 4px;
+}
+
+.validation-success {
+  color: #28a745;
+  font-size: 0.85rem;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .demo-info {
   margin-top: 24px;
   padding: 12px;

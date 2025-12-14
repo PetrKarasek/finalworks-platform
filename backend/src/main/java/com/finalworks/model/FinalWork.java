@@ -20,17 +20,20 @@ public class FinalWork {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 200)
     private String title;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", length = 5000)
     private String description;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 500)
     private String fileUrl;
 
     @Column(nullable = false)
     private LocalDateTime submittedAt;
+
+    @Version
+    private Long version; // Optimistic locking for concurrent access
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)

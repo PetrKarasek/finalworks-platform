@@ -7,10 +7,14 @@ import com.finalworks.exception.ConflictException;
 import com.finalworks.exception.ResourceNotFoundException;
 import com.finalworks.model.Student;
 import com.finalworks.repository.StudentRepository;
+import com.finalworks.service.EmailService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,8 +22,10 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/students")
-@CrossOrigin(origins = "https://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:3000", "https://localhost:3000"})
 public class StudentController {
+
+    private static final Logger logger = LoggerFactory.getLogger(StudentController.class);
 
     @Autowired
     private StudentRepository studentRepository;
@@ -27,87 +33,137 @@ public class StudentController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private EmailService emailService;
+
     @GetMapping
     public ResponseEntity<List<StudentDTO>> getAllStudents() {
-        List<StudentDTO> students = studentRepository.findAll().stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(students);
+        logger.debug("Fetching all students");
+        try {
+            List<StudentDTO> students = studentRepository.findAll().stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            logger.info("Successfully fetched {} students", students.size());
+            return ResponseEntity.ok(students);
+        } catch (Exception e) {
+            logger.error("Error fetching all students", e);
+            throw e;
+        }
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<StudentDTO> getStudentById(@PathVariable Long id) {
-        Student student = studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found with id: " + id));
-        return ResponseEntity.ok(convertToDTO(student));
+        logger.debug("Fetching student with id: {}", id);
+        try {
+            Student student = studentRepository.findById(id)
+                    .orElseThrow(() -> {
+                        logger.warn("Student not found with id: {}", id);
+                        return new ResourceNotFoundException("Student not found with id: " + id);
+                    });
+            logger.debug("Successfully fetched student with id: {}", id);
+            return ResponseEntity.ok(convertToDTO(student));
+        } catch (ResourceNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("Error fetching student with id: {}", id, e);
+            throw e;
+        }
     }
 
     @PostMapping
-    public ResponseEntity<StudentDTO> createStudent(@RequestBody StudentRequestDTO studentRequest) {
-        // Ověřit vstup
-        if (studentRequest.getName() == null || studentRequest.getName().trim().isEmpty()) {
-            throw new BadRequestException("Name is required");
+    @Transactional
+    public ResponseEntity<StudentDTO> createStudent(@jakarta.validation.Valid @RequestBody StudentRequestDTO studentRequest) {
+        logger.info("Creating new student with email: {}", studentRequest.getEmail());
+        try {
+            String email = studentRequest.getEmail().trim().toLowerCase();
+            
+            // Zkontrolovat, zda email již existuje
+            if (studentRepository.findByEmail(email).isPresent()) {
+                logger.warn("Attempt to create student with existing email: {}", email);
+                throw new ConflictException("Email already exists: " + email);
+            }
+            
+            Student student = new Student();
+            student.setName(studentRequest.getName().trim());
+            student.setEmail(email);
+            // Hashovat heslo před uložením - heslo se nikdy neukládá jako prostý text
+            // BCrypt automaticky generuje salt a hash
+            student.setPassword(passwordEncoder.encode(studentRequest.getPassword()));
+            
+            Student saved = studentRepository.save(student);
+            logger.info("Successfully created student with id: {} and email: {}", saved.getId(), saved.getEmail());
+            
+            // Send confirmation email
+            emailService.sendRegistrationConfirmation(saved.getEmail(), saved.getName());
+            
+            return ResponseEntity.status(HttpStatus.CREATED).body(convertToDTO(saved));
+        } catch (ConflictException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("Error creating student", e);
+            throw e;
         }
-        if (studentRequest.getEmail() == null || studentRequest.getEmail().trim().isEmpty()) {
-            throw new BadRequestException("Email is required");
-        }
-        if (studentRequest.getPassword() == null || studentRequest.getPassword().isEmpty()) {
-            throw new BadRequestException("Password is required");
-        }
-        
-        // Zkontrolovat, zda email již existuje
-        if (studentRepository.findByEmail(studentRequest.getEmail()).isPresent()) {
-            throw new ConflictException("Email already exists: " + studentRequest.getEmail());
-        }
-        
-        Student student = new Student();
-        student.setName(studentRequest.getName());
-        student.setEmail(studentRequest.getEmail());
-        // Hashovat heslo před uložením - heslo se nikdy neukládá jako prostý text
-        student.setPassword(passwordEncoder.encode(studentRequest.getPassword()));
-        
-        Student saved = studentRepository.save(student);
-        return ResponseEntity.status(HttpStatus.CREATED).body(convertToDTO(saved));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<StudentDTO> updateStudent(@PathVariable Long id, @RequestBody StudentRequestDTO studentRequest) {
-        Student student = studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found with id: " + id));
-        
-        // Ověřit vstup
-        if (studentRequest.getName() == null || studentRequest.getName().trim().isEmpty()) {
-            throw new BadRequestException("Name is required");
-        }
-        if (studentRequest.getEmail() == null || studentRequest.getEmail().trim().isEmpty()) {
-            throw new BadRequestException("Email is required");
-        }
-        
-        // Zkontrolovat, zda se email mění a zda nový email již existuje
-        if (!student.getEmail().equals(studentRequest.getEmail())) {
-            if (studentRepository.findByEmail(studentRequest.getEmail()).isPresent()) {
-                throw new ConflictException("Email already exists: " + studentRequest.getEmail());
+    @Transactional
+    public ResponseEntity<StudentDTO> updateStudent(@PathVariable Long id, @jakarta.validation.Valid @RequestBody StudentRequestDTO studentRequest) {
+        logger.info("Updating student with id: {}", id);
+        try {
+            Student student = studentRepository.findById(id)
+                    .orElseThrow(() -> {
+                        logger.warn("Student not found with id: {}", id);
+                        return new ResourceNotFoundException("Student not found with id: " + id);
+                    });
+            
+            String email = studentRequest.getEmail().trim().toLowerCase();
+            
+            // Zkontrolovat, zda se email mění a zda nový email již existuje
+            if (!student.getEmail().equals(email)) {
+                if (studentRepository.findByEmail(email).isPresent()) {
+                    logger.warn("Attempt to update student {} with existing email: {}", id, email);
+                    throw new ConflictException("Email already exists: " + email);
+                }
             }
+            
+            student.setName(studentRequest.getName().trim());
+            student.setEmail(email);
+            
+            // Hashovat heslo, pokud se aktualizuje - heslo se nikdy neukládá jako prostý text
+            if (studentRequest.getPassword() != null && !studentRequest.getPassword().isEmpty()) {
+                logger.debug("Updating password for student with id: {}", id);
+                student.setPassword(passwordEncoder.encode(studentRequest.getPassword()));
+            }
+            
+            Student updated = studentRepository.save(student);
+            logger.info("Successfully updated student with id: {}", id);
+            return ResponseEntity.ok(convertToDTO(updated));
+        } catch (ResourceNotFoundException | ConflictException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("Error updating student with id: {}", id, e);
+            throw e;
         }
-        
-        student.setName(studentRequest.getName());
-        student.setEmail(studentRequest.getEmail());
-        // Hashovat heslo, pokud se aktualizuje - heslo se nikdy neukládá jako prostý text
-        if (studentRequest.getPassword() != null && !studentRequest.getPassword().isEmpty()) {
-            student.setPassword(passwordEncoder.encode(studentRequest.getPassword()));
-        }
-        
-        Student updated = studentRepository.save(student);
-        return ResponseEntity.ok(convertToDTO(updated));
     }
 
     @DeleteMapping("/{id}")
+    @Transactional
     public ResponseEntity<Void> deleteStudent(@PathVariable Long id) {
-        if (!studentRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Student not found with id: " + id);
+        logger.info("Deleting student with id: {}", id);
+        try {
+            if (!studentRepository.existsById(id)) {
+                logger.warn("Student not found with id: {}", id);
+                throw new ResourceNotFoundException("Student not found with id: " + id);
+            }
+            studentRepository.deleteById(id);
+            logger.info("Successfully deleted student with id: {}", id);
+            return ResponseEntity.noContent().build();
+        } catch (ResourceNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("Error deleting student with id: {}", id, e);
+            throw e;
         }
-        studentRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
     }
 
     private StudentDTO convertToDTO(Student student) {

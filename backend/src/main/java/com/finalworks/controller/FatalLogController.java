@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/fatal-logs")
-@CrossOrigin(origins = "https://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:3000", "https://localhost:3000"})
 public class FatalLogController {
 
     @Autowired
