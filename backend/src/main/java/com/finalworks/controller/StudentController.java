@@ -171,6 +171,7 @@ public class StudentController {
         dto.setId(student.getId());
         dto.setName(student.getName());
         dto.setEmail(student.getEmail());
+        dto.setRole(student.getRole() != null ? student.getRole().name() : null);
         // Heslo je záměrně vyloučeno - nikdy se nevrací
         return dto;
     }

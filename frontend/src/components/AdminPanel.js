@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { finalWorksAPI, studentsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './AdminPanel.css';
@@ -10,14 +10,7 @@ const AdminPanel = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!isAdmin) {
-      return;
-    }
-    fetchData();
-  }, [isAdmin, activeTab]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       if (activeTab === 'works') {
@@ -32,7 +25,14 @@ const AdminPanel = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+    fetchData();
+  }, [isAdmin, fetchData]);
 
   const handleDeleteWork = async (id) => {
     if (!window.confirm('Opravdu chcete smazat tuto práci?')) {

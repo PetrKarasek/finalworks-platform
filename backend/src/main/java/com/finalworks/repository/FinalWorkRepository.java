@@ -10,5 +10,6 @@ import java.util.List;
 public interface FinalWorkRepository extends JpaRepository<FinalWork, Long> {
     List<FinalWork> findByStudentId(Long studentId);
     List<FinalWork> findAllByOrderBySubmittedAtDesc();
+    boolean existsByTitle(String title);
 }
 

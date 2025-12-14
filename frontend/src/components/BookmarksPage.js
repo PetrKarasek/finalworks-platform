@@ -1,18 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { finalWorksAPI } from '../services/api';
 import { getBookmarkedWorks } from '../utils/bookmarks';
 import { getAverageRating } from '../utils/ratings';
+import { useAuth } from '../context/AuthContext';
 import './BookmarksPage.css';
 
 const BookmarksPage = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [bookmarkedWorks, setBookmarkedWorks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
     fetchBookmarkedWorks();
-  }, []);
+  }, [isAuthenticated, navigate]);
 
   const fetchBookmarkedWorks = async () => {
     try {

@@ -12,35 +12,49 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [token, setToken] = useState(null);
+  const [role, setRole] = useState(null);
 
   useEffect(() => {
     // Load user from localStorage on mount
     const savedUser = localStorage.getItem('user');
-    const savedIsAdmin = localStorage.getItem('isAdmin') === 'true';
+    const savedToken = localStorage.getItem('token');
+    const savedRole = localStorage.getItem('role');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
-      setIsAdmin(savedIsAdmin);
+    }
+    if (savedToken) {
+      setToken(savedToken);
+    }
+    if (savedRole) {
+      setRole(savedRole);
     }
   }, []);
 
-  const login = (userData, admin = false) => {
+  const login = (userData, authToken, userRole) => {
     setUser(userData);
-    setIsAdmin(admin);
+    setToken(authToken);
+    setRole(userRole);
     localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('isAdmin', admin.toString());
+    localStorage.setItem('token', authToken);
+    localStorage.setItem('role', userRole);
   };
 
   const logout = () => {
     setUser(null);
-    setIsAdmin(false);
+    setToken(null);
+    setRole(null);
     localStorage.removeItem('user');
-    localStorage.removeItem('isAdmin');
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
     localStorage.removeItem('bookmarks');
   };
 
+  const isAdmin = role === 'ADMIN';
+  const isAuthenticated = !!token;
+
   return (
-    <AuthContext.Provider value={{ user, isAdmin, login, logout }}>
+    <AuthContext.Provider value={{ user, token, role, isAuthenticated, isAdmin, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

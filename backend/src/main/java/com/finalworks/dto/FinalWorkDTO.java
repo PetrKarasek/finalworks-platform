@@ -1,7 +1,6 @@
 package com.finalworks.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -29,7 +28,6 @@ public class FinalWorkDTO {
     
     private LocalDateTime submittedAt;
     
-    @NotNull(message = "Student ID is required")
     private Long studentId;
     
     private String studentName;

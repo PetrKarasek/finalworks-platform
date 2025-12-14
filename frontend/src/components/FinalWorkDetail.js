@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { finalWorksAPI } from '../services/api';
 import { getWorkRating, rateWork } from '../utils/ratings';
@@ -8,25 +8,16 @@ import './FinalWorkDetail.css';
 
 const FinalWorkDetail = () => {
   const { id } = useParams();
-  const { user, isAdmin } = useAuth();
+  const { user, isAuthenticated, isAdmin } = useAuth();
   const [finalWork, setFinalWork] = useState(null);
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [newComment, setNewComment] = useState({ content: '', authorName: '' });
+  const [newComment, setNewComment] = useState({ content: '' });
   const [userRating, setUserRating] = useState(0);
   const [bookmarked, setBookmarked] = useState(false);
 
-  useEffect(() => {
-    fetchFinalWork();
-    fetchComments();
-    if (id) {
-      setUserRating(getWorkRating(Number(id)));
-      setBookmarked(isBookmarked(Number(id)));
-    }
-  }, [id]);
-
-  const fetchFinalWork = async () => {
+  const fetchFinalWork = useCallback(async () => {
     try {
       const response = await finalWorksAPI.getById(id);
       setFinalWork(response.data);
@@ -36,27 +27,45 @@ const FinalWorkDetail = () => {
       setLoading(false);
       console.error(err);
     }
-  };
+  }, [id]);
 
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     try {
       const response = await finalWorksAPI.getComments(id);
       setComments(response.data);
     } catch (err) {
       console.error('Failed to load comments', err);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchFinalWork();
+    fetchComments();
+    if (id) {
+      if (isAuthenticated) {
+        setUserRating(getWorkRating(Number(id)));
+        setBookmarked(isBookmarked(Number(id)));
+      } else {
+        setUserRating(0);
+        setBookmarked(false);
+      }
+    }
+  }, [id, fetchComments, fetchFinalWork, isAuthenticated]);
 
   const handleSubmitComment = async (e) => {
     e.preventDefault();
-    if (!newComment.content.trim() || !newComment.authorName.trim()) {
-      alert('Prosím vyplňte všechna pole');
+    if (!isAuthenticated) {
+      alert('Pro komentování se musíte přihlásit');
+      return;
+    }
+    if (!newComment.content.trim()) {
+      alert('Prosím napište komentář');
       return;
     }
 
     try {
-      await finalWorksAPI.addComment(id, newComment);
-      setNewComment({ content: '', authorName: '' });
+      await finalWorksAPI.addComment(id, { content: newComment.content });
+      setNewComment({ content: '' });
       fetchComments();
       fetchFinalWork();
     } catch (err) {
@@ -66,11 +75,19 @@ const FinalWorkDetail = () => {
   };
 
   const handleRating = (rating) => {
+    if (!isAuthenticated) {
+      alert('Pro hodnocení se musíte přihlásit');
+      return;
+    }
     rateWork(Number(id), rating);
     setUserRating(rating);
   };
 
   const handleBookmark = () => {
+    if (!isAuthenticated) {
+      alert('Pro záložky se musíte přihlásit');
+      return;
+    }
     if (bookmarked) {
       removeBookmark(Number(id));
       setBookmarked(false);
@@ -106,13 +123,15 @@ const FinalWorkDetail = () => {
         <div className="work-title-row">
           <h1>{finalWork.title}</h1>
           <div className="work-actions">
-            <button
-              onClick={handleBookmark}
-              className={`bookmark-btn ${bookmarked ? 'bookmarked' : ''}`}
-              title={bookmarked ? 'Odebrat ze záložek' : 'Přidat do záložek'}
-            >
-              {bookmarked ? '🔖' : '🔗'}
-            </button>
+            {isAuthenticated && (
+              <button
+                onClick={handleBookmark}
+                className={`bookmark-btn ${bookmarked ? 'bookmarked' : ''}`}
+                title={bookmarked ? 'Odebrat ze záložek' : 'Přidat do záložek'}
+              >
+                {bookmarked ? '🔖' : '🔗'}
+              </button>
+            )}
             {isAdmin && (
               <button onClick={handleDelete} className="delete-btn" title="Smazat práci">
                 🗑️
@@ -135,6 +154,7 @@ const FinalWorkDetail = () => {
                 type="button"
                 className={`star ${star <= userRating ? 'active' : ''}`}
                 onClick={() => handleRating(star)}
+                disabled={!isAuthenticated}
                 title={`Ohodnotit ${star} ${star === 1 ? 'hvězdičkou' : 'hvězdičkami'}`}
               >
                 ⭐
@@ -165,32 +185,28 @@ const FinalWorkDetail = () => {
 
       <div className="comments-section">
         <h2>Komentáře ({comments.length})</h2>
-        
-        <form onSubmit={handleSubmitComment} className="comment-form">
-          <div className="form-group">
-            <label htmlFor="authorName">Vaše jméno</label>
-            <input
-              type="text"
-              id="authorName"
-              value={newComment.authorName}
-              onChange={(e) => setNewComment({ ...newComment, authorName: e.target.value })}
-              placeholder="Zadejte vaše jméno"
-              required
-            />
+
+        {!isAuthenticated ? (
+          <div className="no-comments">
+            Pro přidání komentáře se musíte <Link to="/login">přihlásit</Link>.
           </div>
-          <div className="form-group">
-            <label htmlFor="content">Komentář</label>
-            <textarea
-              id="content"
-              value={newComment.content}
-              onChange={(e) => setNewComment({ ...newComment, content: e.target.value })}
-              placeholder="Napište váš komentář..."
-              rows="4"
-              required
-            />
-          </div>
-          <button type="submit" className="submit-button">Odeslat komentář</button>
-        </form>
+        ) : (
+          <form onSubmit={handleSubmitComment} className="comment-form">
+            <div className="form-group">
+              <label htmlFor="content">Komentář</label>
+              <textarea
+                id="content"
+                value={newComment.content}
+                onChange={(e) => setNewComment({ ...newComment, content: e.target.value })}
+                placeholder="Napište váš komentář..."
+                rows="4"
+                required
+              />
+            </div>
+            {user && <div className="form-group"><small>Přihlášen jako: {user.name}</small></div>}
+            <button type="submit" className="submit-button">Odeslat komentář</button>
+          </form>
+        )}
 
         <div className="comments-list">
           {comments.length === 0 ? (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { finalWorksAPI } from '../services/api';
 import { getAverageRating } from '../utils/ratings';
@@ -11,15 +11,7 @@ const FinalWorksList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchFinalWorks();
-  }, []);
-
-  useEffect(() => {
-    filterWorks();
-  }, [searchQuery, finalWorks]);
-
-  const fetchFinalWorks = async () => {
+  const fetchFinalWorks = useCallback(async () => {
     try {
       const response = await finalWorksAPI.getAll();
       setFinalWorks(response.data);
@@ -30,9 +22,9 @@ const FinalWorksList = () => {
       setLoading(false);
       console.error(err);
     }
-  };
+  }, []);
 
-  const filterWorks = () => {
+  const filterWorks = useCallback(() => {
     if (!searchQuery.trim()) {
       setFilteredWorks(finalWorks);
       return;
@@ -45,7 +37,15 @@ const FinalWorksList = () => {
       (work.studentName && work.studentName.toLowerCase().includes(query))
     );
     setFilteredWorks(filtered);
-  };
+  }, [finalWorks, searchQuery]);
+
+  useEffect(() => {
+    fetchFinalWorks();
+  }, [fetchFinalWorks]);
+
+  useEffect(() => {
+    filterWorks();
+  }, [filterWorks]);
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);

@@ -11,6 +11,9 @@ import com.finalworks.repository.FinalWorkRepository;
 import com.finalworks.repository.StudentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,11 +71,8 @@ public class FinalWorkService {
     public FinalWorkDTO createFinalWork(FinalWorkDTO finalWorkDTO) {
         logger.info("Creating final work with title: {}", finalWorkDTO.getTitle());
         try {
-            Student student = studentRepository.findById(finalWorkDTO.getStudentId())
-                    .orElseThrow(() -> {
-                        logger.warn("Student not found with id: {}", finalWorkDTO.getStudentId());
-                        return new ResourceNotFoundException("Student not found with id: " + finalWorkDTO.getStudentId());
-                    });
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            Student student = (Student) authentication.getPrincipal();
 
             FinalWork finalWork = new FinalWork();
             finalWork.setTitle(finalWorkDTO.getTitle().trim());
@@ -95,26 +95,22 @@ public class FinalWorkService {
     public FinalWorkDTO updateFinalWork(Long id, FinalWorkDTO finalWorkDTO) {
         logger.info("Updating final work with id: {}", id);
         try {
-            FinalWork finalWork = finalWorkRepository.findById(id)
+            FinalWork existing = finalWorkRepository.findById(id)
                     .orElseThrow(() -> {
                         logger.warn("Final work not found with id: {}", id);
                         return new ResourceNotFoundException("Final work not found with id: " + id);
                     });
 
-            // Aktualizovat pouze poskytnutá pole, zachovat existující hodnoty pro ostatní
-            if (finalWorkDTO.getTitle() != null && !finalWorkDTO.getTitle().trim().isEmpty()) {
-                finalWork.setTitle(finalWorkDTO.getTitle().trim());
-            }
-            if (finalWorkDTO.getDescription() != null) {
-                finalWork.setDescription(finalWorkDTO.getDescription().trim());
-            }
-            if (finalWorkDTO.getFileUrl() != null && !finalWorkDTO.getFileUrl().trim().isEmpty()) {
-                finalWork.setFileUrl(finalWorkDTO.getFileUrl().trim());
-            }
+            existing.setTitle(finalWorkDTO.getTitle().trim());
+            existing.setDescription(finalWorkDTO.getDescription() != null ? finalWorkDTO.getDescription().trim() : null);
+            existing.setFileUrl(finalWorkDTO.getFileUrl().trim());
 
-            FinalWork updated = finalWorkRepository.save(finalWork);
-            logger.info("Successfully updated final work with id: {}", id);
-            return convertToDTO(updated);
+            FinalWork saved = finalWorkRepository.save(existing);
+            logger.info("Successfully updated final work with id: {}", saved.getId());
+            return convertToDTO(saved);
+        } catch (OptimisticLockingFailureException e) {
+            logger.warn("Optimistic lock exception when updating final work with id: {}", id, e);
+            throw new ResourceNotFoundException("Final work was modified by another user. Please refresh and try again.");
         } catch (ResourceNotFoundException e) {
             throw e;
         } catch (Exception e) {
@@ -127,12 +123,17 @@ public class FinalWorkService {
     public void deleteFinalWork(Long id) {
         logger.info("Deleting final work with id: {}", id);
         try {
-            if (!finalWorkRepository.existsById(id)) {
-                logger.warn("Final work not found with id: {}", id);
-                throw new ResourceNotFoundException("Final work not found with id: " + id);
-            }
-            finalWorkRepository.deleteById(id);
+            FinalWork finalWork = finalWorkRepository.findById(id)
+                    .orElseThrow(() -> {
+                        logger.warn("Final work not found with id: {}", id);
+                        return new ResourceNotFoundException("Final work not found with id: " + id);
+                    });
+
+            finalWorkRepository.delete(finalWork);
             logger.info("Successfully deleted final work with id: {}", id);
+        } catch (OptimisticLockingFailureException e) {
+            logger.warn("Optimistic lock exception when deleting final work with id: {}", id, e);
+            throw new ResourceNotFoundException("Final work was modified by another user. Please refresh and try again.");
         } catch (ResourceNotFoundException e) {
             throw e;
         } catch (Exception e) {
@@ -167,7 +168,9 @@ public class FinalWorkService {
 
             Comment comment = new Comment();
             comment.setContent(commentDTO.getContent().trim());
-            comment.setAuthorName(commentDTO.getAuthorName().trim());
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            Student student = (Student) authentication.getPrincipal();
+            comment.setAuthorName(student.getName());
             comment.setFinalWork(finalWork);
 
             Comment saved = commentRepository.save(comment);
@@ -219,7 +222,6 @@ public class FinalWorkService {
         CommentDTO dto = new CommentDTO();
         dto.setId(comment.getId());
         dto.setContent(comment.getContent());
-        dto.setAuthorName(comment.getAuthorName());
         dto.setCreatedAt(comment.getCreatedAt());
         dto.setFinalWorkId(comment.getFinalWork().getId());
         return dto;

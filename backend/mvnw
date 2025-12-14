@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+
+MVNW_PROJECT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+WRAPPER_DIR="$MVNW_PROJECT_DIR/.mvn/wrapper"
+PROPS_FILE="$WRAPPER_DIR/maven-wrapper.properties"
+WRAPPER_JAR="$WRAPPER_DIR/maven-wrapper.jar"
+
+if [ ! -f "$PROPS_FILE" ]; then
+  echo "Maven wrapper properties not found: $PROPS_FILE" 1>&2
+  exit 1
+fi
+
+WRAPPER_URL=$(grep -E '^wrapperUrl=' "$PROPS_FILE" | sed -e 's/^wrapperUrl=//')
+if [ -z "$WRAPPER_URL" ]; then
+  WRAPPER_URL="https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar"
+fi
+
+if [ ! -f "$WRAPPER_JAR" ]; then
+  mkdir -p "$WRAPPER_DIR"
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$WRAPPER_URL" -o "$WRAPPER_JAR"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -q "$WRAPPER_URL" -O "$WRAPPER_JAR"
+  else
+    echo "Neither curl nor wget found; cannot download Maven Wrapper JAR." 1>&2
+    exit 1
+  fi
+fi
+
+JAVA_EXE="java"
+if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ]; then
+  JAVA_EXE="$JAVA_HOME/bin/java"
+fi
+
+exec "$JAVA_EXE" -Dmaven.multiModuleProjectDirectory="$MVNW_PROJECT_DIR" -classpath "$WRAPPER_JAR" org.apache.maven.wrapper.MavenWrapperMain "$@"

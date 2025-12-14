@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { studentsAPI } from '../services/api';
+import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './LoginPage.css';
 
@@ -59,25 +59,21 @@ const LoginPage = () => {
 
     try {
       if (isLogin) {
-        // Simple login - in a real app, this would be an authentication endpoint
-        // For now, we'll just check if user exists and set them as logged in
-        const response = await studentsAPI.getAll();
-        const user = response.data.find(s => s.email === formData.email);
-        
-        if (user) {
-          login(user, formData.email === 'admin@example.com'); // Simple admin check
-          navigate('/');
-        } else {
-          setError('Uživatel s tímto emailem nebyl nalezen');
-        }
+        const response = await api.post('/auth/login', {
+          email: formData.email,
+          password: formData.password
+        });
+
+        login(response.data.user, response.data.token, response.data.role);
+        navigate('/');
       } else {
         // Register
-        const response = await studentsAPI.create({
+        const response = await api.post('/auth/register', {
           name: formData.name,
           email: formData.email,
           password: formData.password
         });
-        login(response.data, false);
+        login(response.data.user, response.data.token, response.data.role);
         navigate('/');
       }
     } catch (err) {

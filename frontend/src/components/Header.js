@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import './Header.css';
 
 const Header = () => {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
 
   return (
     <header className="header">
@@ -15,8 +15,8 @@ const Header = () => {
         <nav className="nav-menu">
           <Link to="/" className="nav-link">Domů</Link>
           <Link to="/works" className="nav-link">Všechny práce</Link>
-          <Link to="/upload" className="nav-link">Nahrát práci</Link>
-          <Link to="/bookmarks" className="nav-link">Záložky</Link>
+          {isAuthenticated && <Link to="/upload" className="nav-link">Nahrát práci</Link>}
+          {isAuthenticated && <Link to="/bookmarks" className="nav-link">Záložky</Link>}
           {isAdmin && (
             <Link to="/admin" className="nav-link admin-link">Admin</Link>
           )}

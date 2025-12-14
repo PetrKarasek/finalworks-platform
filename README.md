@@ -57,12 +57,6 @@ cd backend\src\main\resources
 keytool -genkeypair -alias finalworks -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore keystore.p12 -validity 365 -storepass changeit
 ```
 
-**Linux/Mac:**
-```bash
-cd backend/src/main/resources
-keytool -genkeypair -alias finalworks -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore keystore.p12 -validity 365 -storepass changeit
-```
-
 **Important:** When prompted for "What is your first and last name?", enter: `localhost`
 
 This will create `keystore.p12` in `backend/src/main/resources/` directory.
