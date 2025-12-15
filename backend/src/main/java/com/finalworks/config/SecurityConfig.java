@@ -61,6 +61,7 @@ public class SecurityConfig {
 
                 .requestMatchers(HttpMethod.GET, "/api/final-works/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/files/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/tags/**").permitAll()
 
                 .requestMatchers("/api/students/**").hasRole("ADMIN")
                 .requestMatchers("/api/fatal-logs/**").hasRole("ADMIN")

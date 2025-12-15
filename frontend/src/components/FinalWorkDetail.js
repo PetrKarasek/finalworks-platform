@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { finalWorksAPI } from '../services/api';
-import { getWorkRating, rateWork } from '../utils/ratings';
-import { isBookmarked, addBookmark, removeBookmark } from '../utils/bookmarks';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { finalWorksAPI, ratingsAPI, bookmarksAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './FinalWorkDetail.css';
 
 const FinalWorkDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user, isAuthenticated, isAdmin } = useAuth();
   const [finalWork, setFinalWork] = useState(null);
   const [comments, setComments] = useState([]);
@@ -41,16 +40,7 @@ const FinalWorkDetail = () => {
   useEffect(() => {
     fetchFinalWork();
     fetchComments();
-    if (id) {
-      if (isAuthenticated) {
-        setUserRating(getWorkRating(Number(id)));
-        setBookmarked(isBookmarked(Number(id)));
-      } else {
-        setUserRating(0);
-        setBookmarked(false);
-      }
-    }
-  }, [id, fetchComments, fetchFinalWork, isAuthenticated]);
+  }, [fetchComments, fetchFinalWork]);
 
   const handleSubmitComment = async (e) => {
     e.preventDefault();
@@ -74,26 +64,32 @@ const FinalWorkDetail = () => {
     }
   };
 
-  const handleRating = (rating) => {
-    if (!isAuthenticated) {
-      alert('Pro hodnocení se musíte přihlásit');
-      return;
+  const handleRating = async (rating) => {
+    if (!isAuthenticated) return;
+    try {
+      await ratingsAPI.rate(Number(id), rating);
+      setUserRating(rating);
+      // Refresh work data to get updated average rating
+      fetchFinalWork();
+    } catch (err) {
+      alert('Nepodařilo se ohodnotit práci');
+      console.error(err);
     }
-    rateWork(Number(id), rating);
-    setUserRating(rating);
   };
 
-  const handleBookmark = () => {
-    if (!isAuthenticated) {
-      alert('Pro záložky se musíte přihlásit');
-      return;
-    }
-    if (bookmarked) {
-      removeBookmark(Number(id));
-      setBookmarked(false);
-    } else {
-      addBookmark(Number(id));
-      setBookmarked(true);
+  const handleBookmark = async () => {
+    if (!isAuthenticated) return;
+    try {
+      if (bookmarked) {
+        await bookmarksAPI.removeBookmark(Number(id));
+        setBookmarked(false);
+      } else {
+        await bookmarksAPI.bookmark(Number(id));
+        setBookmarked(true);
+      }
+    } catch (err) {
+      alert('Nepodařilo se upravit záložku');
+      console.error(err);
     }
   };
 
@@ -145,6 +141,26 @@ const FinalWorkDetail = () => {
             Přidáno: {new Date(finalWork.submittedAt).toLocaleString('cs-CZ')}
           </span>
         </div>
+        {finalWork.tags && finalWork.tags.length > 0 && (
+          <div className="tags-section">
+            <span className="tags-label">Tagy:</span>
+            <div className="tags">
+              {finalWork.tags.map(tag => (
+                <span 
+                  key={tag.id} 
+                  className="tag clickable" 
+                  onClick={() => {
+                    console.log('Detail tag clicked:', tag.name);
+                    console.log('Navigating to:', '/works?tags=' + encodeURIComponent(tag.name));
+                    navigate('/works?tags=' + encodeURIComponent(tag.name));
+                  }}
+                >
+                  {tag.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="rating-section">
           <span className="rating-label">Hodnocení:</span>
           <div className="star-rating">

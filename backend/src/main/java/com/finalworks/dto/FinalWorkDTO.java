@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -33,6 +34,9 @@ public class FinalWorkDTO {
     private String studentName;
     private String studentEmail;
     private List<CommentDTO> comments;
+    private Set<TagDTO> tags;
+    private Double averageRating;
+    private Long ratingCount;
 }
 
 

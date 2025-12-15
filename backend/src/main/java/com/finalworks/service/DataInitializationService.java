@@ -3,8 +3,10 @@ package com.finalworks.service;
 import com.finalworks.model.FinalWork;
 import com.finalworks.model.Role;
 import com.finalworks.model.Student;
+import com.finalworks.model.Tag;
 import com.finalworks.repository.FinalWorkRepository;
 import com.finalworks.repository.StudentRepository;
+import com.finalworks.service.TagService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,9 @@ public class DataInitializationService implements CommandLineRunner {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private TagService tagService;
 
     @Override
     @Transactional
@@ -61,26 +66,76 @@ public class DataInitializationService implements CommandLineRunner {
 
     private void ensureSampleWorksExist(Student student1, Student student2) {
         // Create sample works only if they don't already exist (by title)
-        if (!finalWorkRepository.existsByTitle("Analýza moderních webových technologií")) {
+        // Check if first demo work exists and add tags if missing
+        FinalWork existingWork1 = finalWorkRepository.findByTitle("Moderní webové aplikace s React a Spring Boot").orElse(null);
+        if (existingWork1 != null && existingWork1.getTags().isEmpty()) {
+            existingWork1.getTags().add(tagService.findOrCreateTag("web"));
+            existingWork1.getTags().add(tagService.findOrCreateTag("frontend"));
+            existingWork1.getTags().add(tagService.findOrCreateTag("frameworks"));
+            finalWorkRepository.save(existingWork1);
+            logger.info("Added tags to existing work: {}", existingWork1.getTitle());
+        } else if (existingWork1 == null) {
+            // Create new demo work with tags
             FinalWork work1 = new FinalWork();
-            work1.setTitle("Analýza moderních webových technologií");
-            work1.setDescription("Tato práce se zabývá analýzou současných webových technologií a frameworků, včetně React, Vue.js a Angular. Zkoumá jejich výhody, nevýhody a vhodnost pro různé typy aplikací.");
-            work1.setFileUrl("https://example.com/works/web-technologies-analysis.pdf");
+            work1.setTitle("Moderní webové aplikace s React a Spring Boot");
+            work1.setDescription("Práce se zaměřuje na vývoj moderních webových aplikací pomocí Reactu na frontendu a Spring Boot na backendu. Zahrnuje analýzu best practices, architekturu, a implementaci REST API.");
+            work1.setFileUrl("https://example.com/works/react-spring-boot.pdf");
             work1.setStudent(student1);
             work1.setSubmittedAt(LocalDateTime.now().minusDays(5));
+            // Add sample tags
+            work1.getTags().add(tagService.findOrCreateTag("web"));
+            work1.getTags().add(tagService.findOrCreateTag("frontend"));
+            work1.getTags().add(tagService.findOrCreateTag("frameworks"));
             finalWorkRepository.save(work1);
             logger.info("Created sample work: {}", work1.getTitle());
         }
 
-        if (!finalWorkRepository.existsByTitle("Implementace bezpečnostních protokolů v distribuovaných systémech")) {
+        // Check if second demo work exists and add tags if missing
+        FinalWork existingWork2 = finalWorkRepository.findByTitle("Implementace bezpečnostních protokolů v distribuovaných systémech").orElse(null);
+        if (existingWork2 != null && existingWork2.getTags().isEmpty()) {
+            existingWork2.getTags().add(tagService.findOrCreateTag("security"));
+            existingWork2.getTags().add(tagService.findOrCreateTag("distributed-systems"));
+            existingWork2.getTags().add(tagService.findOrCreateTag("protocols"));
+            finalWorkRepository.save(existingWork2);
+            logger.info("Added tags to existing work: {}", existingWork2.getTitle());
+        } else if (existingWork2 == null) {
+            // Create new demo work with tags
             FinalWork work2 = new FinalWork();
             work2.setTitle("Implementace bezpečnostních protokolů v distribuovaných systémech");
             work2.setDescription("Práce se zaměřuje na implementaci a testování bezpečnostních protokolů v distribuovaných systémech. Zahrnuje analýzu TLS/SSL, OAuth 2.0 a dalších moderních bezpečnostních řešení.");
             work2.setFileUrl("https://example.com/works/security-protocols.pdf");
             work2.setStudent(student2);
             work2.setSubmittedAt(LocalDateTime.now().minusDays(3));
+            // Add sample tags
+            work2.getTags().add(tagService.findOrCreateTag("security"));
+            work2.getTags().add(tagService.findOrCreateTag("distributed-systems"));
+            work2.getTags().add(tagService.findOrCreateTag("protocols"));
             finalWorkRepository.save(work2);
             logger.info("Created sample work: {}", work2.getTitle());
+        }
+
+        // Add third demo work that shares tags with existing works
+        FinalWork existingWork3 = finalWorkRepository.findByTitle("React Native mobilní aplikace").orElse(null);
+        if (existingWork3 != null && existingWork3.getTags().isEmpty()) {
+            existingWork3.getTags().add(tagService.findOrCreateTag("web"));
+            existingWork3.getTags().add(tagService.findOrCreateTag("frontend"));
+            existingWork3.getTags().add(tagService.findOrCreateTag("mobile"));
+            finalWorkRepository.save(existingWork3);
+            logger.info("Added tags to existing work: {}", existingWork3.getTitle());
+        } else if (existingWork3 == null) {
+            // Create new demo work with overlapping tags
+            FinalWork work3 = new FinalWork();
+            work3.setTitle("React Native mobilní aplikace");
+            work3.setDescription("Vývoj cross-platform mobilní aplikace pomocí React Native. Práce pokrývá návrh UI/UX, integraci s backend API, a nasazení na iOS a Android platformy.");
+            work3.setFileUrl("https://example.com/works/react-native-app.pdf");
+            work3.setStudent(student1);
+            work3.setSubmittedAt(LocalDateTime.now().minusDays(1));
+            // Add sample tags (shares 'web' and 'frontend' with first work)
+            work3.getTags().add(tagService.findOrCreateTag("web"));
+            work3.getTags().add(tagService.findOrCreateTag("frontend"));
+            work3.getTags().add(tagService.findOrCreateTag("mobile"));
+            finalWorkRepository.save(work3);
+            logger.info("Created sample work: {}", work3.getTitle());
         }
     }
 

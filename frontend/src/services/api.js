@@ -36,6 +36,10 @@ api.interceptors.response.use(
 // Final Works API
 export const finalWorksAPI = {
   getAll: () => api.get('/final-works'),
+  getNewest: () => api.get('/final-works/newest'),
+  getTopRated: () => api.get('/final-works/top-rated'),
+  search: (query) => api.get(`/final-works/search?q=${encodeURIComponent(query)}`),
+  filterByTags: (tags) => api.get(`/final-works/filter?tags=${tags.map(encodeURIComponent).join(',')}`),
   getById: (id) => api.get(`/final-works/${id}`),
   create: (data) => api.post('/final-works', data),
   update: (id, data) => api.put(`/final-works/${id}`, data),
@@ -43,6 +47,28 @@ export const finalWorksAPI = {
   getComments: (id) => api.get(`/final-works/${id}/comments`),
   addComment: (id, data) => api.post(`/final-works/${id}/comments`, data),
   deleteComment: (commentId) => api.delete(`/final-works/comments/${commentId}`),
+};
+
+// Tags API
+export const tagsAPI = {
+  getAll: () => api.get('/tags'),
+  getPopular: () => api.get('/tags/popular'),
+  create: (data) => api.post('/tags', data),
+};
+
+// Ratings API
+export const ratingsAPI = {
+  rate: (finalWorkId, rating) => api.post(`/ratings/${finalWorkId}`, { rating }),
+  removeRating: (finalWorkId) => api.delete(`/ratings/${finalWorkId}`),
+  getAverage: (finalWorkId) => api.get(`/ratings/${finalWorkId}/average`),
+  getCount: (finalWorkId) => api.get(`/ratings/${finalWorkId}/count`),
+};
+
+// Bookmarks API
+export const bookmarksAPI = {
+  bookmark: (finalWorkId) => api.post(`/bookmarks/${finalWorkId}`),
+  removeBookmark: (finalWorkId) => api.delete(`/bookmarks/${finalWorkId}`),
+  getUserBookmarks: () => api.get('/bookmarks'),
 };
 
 // Students API

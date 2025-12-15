@@ -29,6 +29,26 @@ public class FinalWorkController {
         return ResponseEntity.ok(finalWorks);
     }
 
+    @GetMapping("/newest")
+    public ResponseEntity<List<FinalWorkDTO>> getNewest() {
+        return ResponseEntity.ok(finalWorkService.getNewest());
+    }
+
+    @GetMapping("/top-rated")
+    public ResponseEntity<List<FinalWorkDTO>> getTopRated() {
+        return ResponseEntity.ok(finalWorkService.getTopRated());
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<FinalWorkDTO>> search(@RequestParam String q) {
+        return ResponseEntity.ok(finalWorkService.searchByQuery(q));
+    }
+
+    @GetMapping("/filter")
+    public ResponseEntity<List<FinalWorkDTO>> filter(@RequestParam List<String> tags) {
+        return ResponseEntity.ok(finalWorkService.filterByTags(tags));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<FinalWorkDTO> getFinalWorkById(@PathVariable Long id) {
         FinalWorkDTO finalWork = finalWorkService.getFinalWorkById(id);

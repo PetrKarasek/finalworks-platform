@@ -2,13 +2,17 @@ package com.finalworks.service;
 
 import com.finalworks.dto.CommentDTO;
 import com.finalworks.dto.FinalWorkDTO;
+import com.finalworks.dto.TagDTO;
 import com.finalworks.exception.ResourceNotFoundException;
 import com.finalworks.model.Comment;
 import com.finalworks.model.FinalWork;
 import com.finalworks.model.Student;
+import com.finalworks.model.Tag;
 import com.finalworks.repository.CommentRepository;
 import com.finalworks.repository.FinalWorkRepository;
+import com.finalworks.repository.RatingRepository;
 import com.finalworks.repository.StudentRepository;
+import com.finalworks.service.TagService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -19,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,6 +40,12 @@ public class FinalWorkService {
     @Autowired
     private CommentRepository commentRepository;
 
+    @Autowired
+    private TagService tagService;
+
+    @Autowired
+    private RatingRepository ratingRepository;
+
     public List<FinalWorkDTO> getAllFinalWorks() {
         logger.debug("Fetching all final works");
         try {
@@ -49,10 +60,46 @@ public class FinalWorkService {
         }
     }
 
+    public List<FinalWorkDTO> getNewest() {
+        logger.debug("Fetching newest final works");
+        List<FinalWorkDTO> works = finalWorkRepository.findNewest().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        logger.info("Fetched {} newest works", works.size());
+        return works;
+    }
+
+    public List<FinalWorkDTO> getTopRated() {
+        logger.debug("Fetching top-rated final works");
+        List<FinalWorkDTO> works = finalWorkRepository.findTopRated().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        logger.info("Fetched {} top-rated works", works.size());
+        return works;
+    }
+
+    public List<FinalWorkDTO> searchByQuery(String query) {
+        logger.debug("Searching works with query: {}", query);
+        List<FinalWorkDTO> works = finalWorkRepository.findByTitleOrDescriptionContainingIgnoreCase(query).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        logger.info("Found {} works matching query: {}", works.size(), query);
+        return works;
+    }
+
+    public List<FinalWorkDTO> filterByTags(List<String> tagNames) {
+        logger.debug("Filtering works by tags: {}", tagNames);
+        List<FinalWorkDTO> works = finalWorkRepository.findByTagNames(tagNames).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        logger.info("Found {} works with tags: {}", works.size(), tagNames);
+        return works;
+    }
+
     public FinalWorkDTO getFinalWorkById(Long id) {
         logger.debug("Fetching final work with id: {}", id);
         try {
-            FinalWork finalWork = finalWorkRepository.findById(id)
+            FinalWork finalWork = finalWorkRepository.findByIdWithTags(id)
                     .orElseThrow(() -> {
                         logger.warn("Final work not found with id: {}", id);
                         return new ResourceNotFoundException("Final work not found with id: " + id);
@@ -80,6 +127,14 @@ public class FinalWorkService {
             finalWork.setFileUrl(finalWorkDTO.getFileUrl().trim());
             finalWork.setStudent(student);
 
+            // Handle tags if provided
+            if (finalWorkDTO.getTags() != null) {
+                Set<Tag> tags = finalWorkDTO.getTags().stream()
+                        .map(tagDTO -> tagService.findOrCreateTag(tagDTO.getName()))
+                        .collect(Collectors.toSet());
+                finalWork.setTags(tags);
+            }
+
             FinalWork saved = finalWorkRepository.save(finalWork);
             logger.info("Successfully created final work with id: {}", saved.getId());
             return convertToDTO(saved);
@@ -104,6 +159,14 @@ public class FinalWorkService {
             existing.setTitle(finalWorkDTO.getTitle().trim());
             existing.setDescription(finalWorkDTO.getDescription() != null ? finalWorkDTO.getDescription().trim() : null);
             existing.setFileUrl(finalWorkDTO.getFileUrl().trim());
+
+            // Handle tags if provided
+            if (finalWorkDTO.getTags() != null) {
+                Set<Tag> tags = finalWorkDTO.getTags().stream()
+                        .map(tagDTO -> tagService.findOrCreateTag(tagDTO.getName()))
+                        .collect(Collectors.toSet());
+                existing.setTags(tags);
+            }
 
             FinalWork saved = finalWorkRepository.save(existing);
             logger.info("Successfully updated final work with id: {}", saved.getId());
@@ -215,6 +278,18 @@ public class FinalWorkService {
         dto.setComments(finalWork.getComments().stream()
                 .map(this::convertCommentToDTO)
                 .collect(Collectors.toList()));
+        dto.setTags(finalWork.getTags().stream()
+                .map(this::convertTagToDTO)
+                .collect(Collectors.toSet()));
+        dto.setAverageRating(ratingRepository.getAverageRatingForWork(finalWork));
+        dto.setRatingCount(ratingRepository.getRatingCountForWork(finalWork));
+        return dto;
+    }
+
+    private TagDTO convertTagToDTO(Tag tag) {
+        TagDTO dto = new TagDTO();
+        dto.setId(tag.getId());
+        dto.setName(tag.getName());
         return dto;
     }
 
